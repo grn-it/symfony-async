@@ -44,4 +44,4 @@ microservices-restart:
 	@docker-compose exec app supervisorctl restart microservices:
 	
 benchmark:
-	@docker-compose run k6 run -d 10s benchmark.k6.js
+	@docker-compose run k6 run -d 1s benchmark.k6.js
