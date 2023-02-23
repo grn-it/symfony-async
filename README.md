@@ -216,3 +216,147 @@ class SalesMicroservice
 
 (new SalesMicroservice());
 ```
+
+Microservices are used when you need to perform simple operations that do not require a framework, ORM and components.  
+Services are used for more complex operations.  
+
+### Sales Service
+This service uses a framework and an ORM to build a SQL query with search, filter and sort features.
+
+A few examples:  
+http://127.0.0.1/service/statistics/sales?search[lastname]=Smi  
+http://127.0.0.1/service/statistics/sales?filter[price][lower]=1000  
+http://127.0.0.1/service/statistics/sales?order[lastname]=asc  
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Controller\Service\Statistics;
+
+use App\Dto\Parameter\ParameterCreator;
+use App\Dto\Service\Statistics\SalesListDto;
+use App\Repository\Admin\Statistics\SalesRepository;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Annotation\Route;
+
+class SalesController extends AbstractController
+{
+    #[Route('/service/statistics/sales', name: 'app_service_statistics_sales')]
+    public function index(
+        SalesRepository $salesRepository,
+        ParameterCreator $parameterCreator,
+        Request $request
+    ): Response
+    {
+        $sales = $salesRepository->findSales(
+            $parameterCreator->createSearch($request),
+            $parameterCreator->createFilterList($request),
+            $parameterCreator->createOrder($request)
+        );
+
+        return $this->json(
+            (new SalesListDto($sales))->getSales()
+        );
+    }
+}
+```
+
+#### Sales Repository
+The `findSales` method allows to search, filter, and sort.
+
+```php
+<?php
+
+namespace App\Repository\Admin\Statistics;
+
+use App\Dto\Parameter\FilterList;
+use App\Dto\Parameter\Order;
+use App\Dto\Parameter\Search;
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\Persistence\ManagerRegistry;
+use App\Entity\Order as OrderEntity;
+
+class SalesRepository extends ServiceEntityRepository
+{
+    public function __construct(ManagerRegistry $registry)
+    {
+        parent::__construct($registry, OrderEntity::class);
+    }
+
+    public function findSales(?Search $search, ?FilterList $filterList, ?Order $order): array
+    {
+        $qb = $this->createQueryBuilder('o')
+            ->select(['
+                b.id, 
+                b.firstname as firstname, 
+                b.lastname as lastname, 
+                b.email, 
+                count(distinct(o.id)) as orderCount,
+                sum(p.price) as orderSum,
+                count(p.id) as productCount
+            '])
+            ->leftJoin('o.buyer', 'b')
+            ->leftJoin('o.orderProducts', 'op')
+            ->leftJoin('op.product', 'p')
+            ->groupBy('b.id')
+        ;
+        
+        if ($search && $search->hasName(['firstname', 'lastname'])) {
+            $qb->andWhere(
+                $qb->expr()->like(
+                    sprintf('lower(b.%s)', $search->getName()),
+                    $qb->expr()->literal(
+                        sprintf('%%%s%%', strtolower($search->getValue()))
+                    )
+                )
+            );
+        }
+        
+        if ($filterList && $filterList->hasName(['email', 'id', 'price'])) {
+            foreach ($filterList->getItems() as $filter) {
+                switch ($filter->getName()) {
+                    case 'email':
+                    case 'id':
+                        $qb->andWhere(sprintf('b.%s = :%s', $filter->getName(), $filter->getName()))
+                            ->setParameter($filter->getName(), $filter->getValue());
+                        break;
+                        
+                    case 'price':
+                        if ($filter->isValueString()) {
+                            $qb->andWhere('p.price < :price')
+                            ->setParameter('price', $filter->getValue());
+                        } elseif ($filter->isValueArray()) {
+                            $filter->hasKey(['greater', 'lower']);
+
+                            $priceGreater = $filter->getValue()['greater'] ?? null;
+                            if ($priceGreater) {
+                                $qb->andWhere('p.price > :priceGreater')
+                                    ->setParameter('priceGreater', $priceGreater);
+                                
+                            }
+                            
+                            $priceLower = $filter->getValue()['lower'] ?? null;
+                            if ($priceLower) {
+                                $qb->andWhere('p.price < :priceLower')
+                                    ->setParameter('priceLower', $priceLower);
+                            }
+                        }
+                        break;
+                }
+            }
+        }
+        
+        if ($order && $order->hasName(['firstname', 'lastname', 'orderSum']) && $order->hasValue(['asc', 'desc'])) {
+            $qb->orderBy($order->getName(), $order->getValue());
+        } else {
+            $qb->orderBy('orderSum', 'desc');
+        }
+
+        return $qb->getQuery()->getArrayResult();
+    }
+}
+```
