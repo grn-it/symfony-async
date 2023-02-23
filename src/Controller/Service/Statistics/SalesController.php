@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Controller\Service\Statistics;
 
 use App\Dto\Parameter\ParameterCreator;
-use App\Dto\Service\Statistics\SalesDto;
 use App\Dto\Service\Statistics\SalesListDto;
 use App\Repository\Admin\Statistics\SalesRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
