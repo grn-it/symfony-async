@@ -360,3 +360,8 @@ class SalesRepository extends ServiceEntityRepository
     }
 }
 ```
+## Benchmarking
+![benchmark](https://github.com/grn-it/assets/blob/main/symfony-async-app/benchmark.png)
+
+In one second, <b>22</b> requests were made.  
+The average time to process a request was <b>45</b>ms.  
