@@ -7,7 +7,7 @@ namespace App\Dto\Service\Statistics;
 class SalesListDto
 {
     /** @var SalesDto[] $sales  */
-    private array $sales;
+    private array $sales = [];
 
     public function __construct(?array $data)
     {
