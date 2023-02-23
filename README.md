@@ -15,4 +15,6 @@ Application developed on [Symfony](https://symfony.com) framework using [Swoole 
 [Supervisor](http://supervisord.org) is used to manage the start and restart of the web server and microservice.
 
 ## Application domain
-Suppose there is a certain administration system and in one of the statistics sections there is a page showing information about orders.
+Suppose there is a certain administration system and in one of the statistics sections there is a page showing information about orders.  
+
+![sales](https://github.com/grn-it/assets/blob/main/symfony-async-app/sales.png)
