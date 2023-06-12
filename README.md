@@ -1,4 +1,4 @@
-# Symfony Asynchronous Application
+# Symfony Async
 The application shows asynchronous interaction with services and microservices.
 
 ## Installation
